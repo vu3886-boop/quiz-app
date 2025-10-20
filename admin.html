@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý câu hỏi</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h2>🛠️ Quản lý câu hỏi</h2>
+  <p>Người dùng: <span id="adminUser"></span></p>
+  <div id="questionList"></div>
+
+  <h3>➕ Thêm / Cập nhật câu hỏi</h3>
+  <input id="questionText" placeholder="Nội dung câu hỏi" /><br>
+  <input id="opt1" placeholder="Đáp án 1" />
+  <input id="opt2" placeholder="Đáp án 2" />
+  <input id="opt3" placeholder="Đáp án 3" />
+  <input id="opt4" placeholder="Đáp án 4" /><br>
+  <input id="correctIndex" type="number" min="1" max="4" placeholder="Số thứ tự đáp án đúng (1–4)" />
+  <button onclick="saveQuestion()">Lưu câu hỏi</button>
+
+  <p><a href="quiz.html">← Trở lại làm bài</a></p>
+
+  <script src="script.js"></script>
+</body>
+</html>

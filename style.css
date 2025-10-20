@@ -1,0 +1,32 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 30px;
+  text-align: center;
+}
+.container {
+  display: flex;
+  flex-direction: column;
+  width: 250px;
+  margin: 0 auto;
+}
+input, button {
+  margin: 5px;
+  padding: 8px;
+}
+button {
+  background: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+button:hover {
+  background: #0056b3;
+}
+.question {
+  text-align: left;
+  margin: 15px auto;
+  width: 60%;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 10px;
+}
+ul { list-style: none; padding: 0; }
