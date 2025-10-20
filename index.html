@@ -3,18 +3,162 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Đăng nhập - Trắc nghiệm</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Quiz App - Đăng nhập</title>
+  <style>
+    body { font-family: sans-serif; background: #f2f2f2; margin: 0; }
+    .container { max-width: 500px; margin: 40px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    input, button, textarea { width: 100%; padding: 8px; margin: 8px 0; }
+    button { cursor: pointer; background: #4CAF50; color: white; border: none; }
+    h2, h3 { text-align: center; }
+    .hidden { display: none; }
+  </style>
 </head>
 <body>
-  <h2>Đăng nhập hoặc Đăng ký</h2>
-
-  <div class="container">
-    <input id="username" type="text" placeholder="Tên đăng nhập" />
-    <input id="password" type="password" placeholder="Mật khẩu" />
-    <button onclick="login()">Đăng nhập / Đăng ký</button>
+  <div class="container" id="loginPage">
+    <h2>Đăng nhập / Đăng ký</h2>
+    <input id="username" placeholder="Tên đăng nhập">
+    <input id="password" type="password" placeholder="Mật khẩu">
+    <button onclick="register()">Đăng ký</button>
+    <button onclick="login()">Đăng nhập</button>
+    <p id="msg" style="color:red"></p>
   </div>
 
-  <script src="script.js"></script>
+  <div class="container hidden" id="quizPage">
+    <h2>Bài trắc nghiệm</h2>
+    <div id="questionContainer"></div>
+    <button onclick="logout()">Đăng xuất</button>
+    <hr>
+    <button onclick="showAdmin()">Quản lý câu hỏi</button>
+  </div>
+
+  <div class="container hidden" id="adminPage">
+    <h2>Quản lý câu hỏi</h2>
+    <textarea id="questionText" placeholder="Nội dung câu hỏi"></textarea>
+    <input id="answerA" placeholder="Đáp án A">
+    <input id="answerB" placeholder="Đáp án B">
+    <input id="answerC" placeholder="Đáp án C">
+    <input id="correct" placeholder="Đáp án đúng (A/B/C)">
+    <button onclick="addQuestion()">Thêm câu hỏi</button>
+    <hr>
+    <h3>Danh sách câu hỏi</h3>
+    <div id="questionList"></div>
+    <button onclick="backToQuiz()">← Quay lại làm bài</button>
+  </div>
+
+  <script>
+    const users = JSON.parse(localStorage.getItem("users") || "{}");
+    const questions = JSON.parse(localStorage.getItem("questions") || "[]");
+    let currentUser = localStorage.getItem("currentUser");
+
+    const loginPage = document.getElementById("loginPage");
+    const quizPage = document.getElementById("quizPage");
+    const adminPage = document.getElementById("adminPage");
+    const msg = document.getElementById("msg");
+
+    function saveData() {
+      localStorage.setItem("users", JSON.stringify(users));
+      localStorage.setItem("questions", JSON.stringify(questions));
+    }
+
+    function showPage(page) {
+      [loginPage, quizPage, adminPage].forEach(p => p.classList.add("hidden"));
+      page.classList.remove("hidden");
+    }
+
+    if (currentUser) showPage(quizPage);
+
+    function register() {
+      const u = username.value.trim();
+      const p = password.value.trim();
+      if (!u || !p) return msg.textContent = "Vui lòng nhập đủ thông tin";
+      if (users[u]) return msg.textContent = "Tài khoản đã tồn tại";
+      users[u] = p; saveData();
+      msg.textContent = "Đăng ký thành công!";
+    }
+
+    function login() {
+      const u = username.value.trim();
+      const p = password.value.trim();
+      if (users[u] === p) {
+        currentUser = u;
+        localStorage.setItem("currentUser", u);
+        showPage(quizPage);
+        renderQuiz();
+      } else msg.textContent = "Sai tài khoản hoặc mật khẩu";
+    }
+
+    function logout() {
+      localStorage.removeItem("currentUser");
+      currentUser = null;
+      showPage(loginPage);
+    }
+
+    function renderQuiz() {
+      const c = document.getElementById("questionContainer");
+      if (questions.length === 0) {
+        c.innerHTML = "<p>Chưa có câu hỏi nào. Vào phần quản lý để thêm!</p>";
+        return;
+      }
+      c.innerHTML = "";
+      questions.forEach((q, i) => {
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <p><b>${i + 1}. ${q.text}</b></p>
+          <label><input type="radio" name="q${i}" value="A"> A. ${q.A}</label><br>
+          <label><input type="radio" name="q${i}" value="B"> B. ${q.B}</label><br>
+          <label><input type="radio" name="q${i}" value="C"> C. ${q.C}</label><br><br>
+        `;
+        c.appendChild(div);
+      });
+    }
+
+    function showAdmin() {
+      showPage(adminPage);
+      renderAdmin();
+    }
+
+    function addQuestion() {
+      const q = {
+        text: questionText.value,
+        A: answerA.value,
+        B: answerB.value,
+        C: answerC.value,
+        correct: correct.value.toUpperCase()
+      };
+      if (!q.text || !q.correct) return alert("Nhập đầy đủ thông tin!");
+      questions.push(q);
+      saveData();
+      renderAdmin();
+      questionText.value = answerA.value = answerB.value = answerC.value = correct.value = "";
+    }
+
+    function renderAdmin() {
+      const list = document.getElementById("questionList");
+      list.innerHTML = "";
+      questions.forEach((q, i) => {
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <b>${i + 1}. ${q.text}</b><br>
+          A: ${q.A} | B: ${q.B} | C: ${q.C} | <b>Đúng: ${q.correct}</b>
+          <button onclick="deleteQuestion(${i})">Xóa</button>
+          <hr>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function deleteQuestion(i) {
+      if (confirm("Xóa câu hỏi này?")) {
+        questions.splice(i, 1);
+        saveData();
+        renderAdmin();
+      }
+    }
+
+    function backToQuiz() {
+      showPage(quizPage);
+      renderQuiz();
+    }
+  </script>
 </body>
 </html>
