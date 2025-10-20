@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quiz App - Có phân quyền</title>
+  <title>Quiz App</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,18 +13,18 @@
       padding: 30px;
     }
     .container {
-      max-width: 600px;
+      max-width: 500px;
       margin: auto;
       background: #fff;
       padding: 30px;
       border-radius: 10px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    input, button, textarea {
+    input, button {
       font-family: Arial, sans-serif;
       padding: 10px;
       margin: 5px;
-      width: 90%;
+      width: 80%;
     }
     button {
       background: #007bff;
@@ -49,16 +49,9 @@
       color: red;
       font-size: 14px;
     }
-    .admin-section {
-      background: #eef5ff;
-      padding: 10px;
-      border-radius: 10px;
-      margin-top: 20px;
-    }
   </style>
 </head>
 <body>
-  <!-- Trang đăng nhập -->
   <div class="container" id="loginPage">
     <h2>Đăng nhập / Đăng ký</h2>
     <input type="text" id="username" placeholder="Tên đăng nhập" /><br />
@@ -68,7 +61,6 @@
     <p id="loginMessage"></p>
   </div>
 
-  <!-- Trang trắc nghiệm -->
   <div class="container" id="quizPage" style="display:none;">
     <h2>Bài trắc nghiệm</h2>
     <div id="quiz"></div>
@@ -76,62 +68,32 @@
     <div class="result" id="result"></div>
   </div>
 
-  <!-- Trang admin -->
-  <div class="container" id="adminPage" style="display:none;">
-    <h2>Quản lý câu hỏi (Admin)</h2>
-    <div id="questionList"></div>
-    <div class="admin-section">
-      <h3>Thêm / Cập nhật câu hỏi</h3>
-      <input type="text" id="newQuestion" placeholder="Nhập nội dung câu hỏi" /><br>
-      <textarea id="newOptions" placeholder="Nhập 4 lựa chọn, cách nhau bằng dấu phẩy"></textarea><br>
-      <input type="number" id="correctIndex" placeholder="Vị trí đáp án đúng (0-3)" min="0" max="3"/><br>
-      <button onclick="addOrUpdateQuestion()">Thêm / Cập nhật</button>
-    </div>
-    <button onclick="logout()">Đăng xuất</button>
-  </div>
-
   <script>
-    // --- Quản lý tài khoản ---
-    const adminUsername = "admin";
-    const adminPassword = "123456"; // mật khẩu mẫu, bạn có thể đổi
-
+    // --- Tài khoản lưu trên localStorage ---
     function register() {
-      const user = username.value.trim();
-      const pass = password.value.trim();
-      if (!user || !pass) return alert("Vui lòng nhập đầy đủ thông tin!");
-      if (user === adminUsername) return alert("Không thể tạo tài khoản trùng với admin!");
+      const user = document.getElementById("username").value;
+      const pass = document.getElementById("password").value;
+      if (!user || !pass) return alert("Vui lòng nhập đủ thông tin!");
       if (localStorage.getItem(user)) return alert("Tài khoản đã tồn tại!");
       localStorage.setItem(user, pass);
       alert("Đăng ký thành công!");
     }
 
     function login() {
-      const user = username.value.trim();
-      const pass = password.value.trim();
+      const user = document.getElementById("username").value;
+      const pass = document.getElementById("password").value;
       const saved = localStorage.getItem(user);
-      if (user === adminUsername && pass === adminPassword) {
-        // admin đăng nhập
-        loginPage.style.display = "none";
-        adminPage.style.display = "block";
-        loadQuestionList();
-      } else if (saved && saved === pass) {
-        // người dùng thường
-        loginPage.style.display = "none";
-        quizPage.style.display = "block";
+      if (saved && saved === pass) {
+        document.getElementById("loginPage").style.display = "none";
+        document.getElementById("quizPage").style.display = "block";
         loadQuiz();
       } else {
-        loginMessage.innerText = "Sai tài khoản hoặc mật khẩu!";
+        document.getElementById("loginMessage").innerText = "Sai tài khoản hoặc mật khẩu!";
       }
     }
 
-    function logout() {
-      adminPage.style.display = "none";
-      quizPage.style.display = "none";
-      loginPage.style.display = "block";
-    }
-
-    // --- Dữ liệu câu hỏi ---
-    let questions = JSON.parse(localStorage.getItem("questions")) || [
+    // --- Danh sách câu hỏi (có thể chỉnh sửa tại đây) ---
+    const questions = [
       {
         q: "1. Thủ đô của Việt Nam là gì?",
         options: ["Hà Nội", "TP. Hồ Chí Minh", "Đà Nẵng", "Huế"],
@@ -142,15 +104,17 @@
         options: ["3", "4", "5", "6"],
         correct: 1
       },
+      {
+        q: "3. Màu đỏ trong cờ Việt Nam tượng trưng cho gì?",
+        options: ["Dòng máu chiến đấu", "Niềm vui", "Hòa bình", "Tình bạn"],
+        correct: 0
+      }
     ];
 
-    function saveQuestions() {
-      localStorage.setItem("questions", JSON.stringify(questions));
-    }
-
-    // --- Trang Quiz (người dùng) ---
+    // --- Hiển thị câu hỏi ---
     function loadQuiz() {
-      quiz.innerHTML = "";
+      const quizDiv = document.getElementById("quiz");
+      quizDiv.innerHTML = "";
       questions.forEach((q, i) => {
         const div = document.createElement("div");
         div.classList.add("question");
@@ -160,10 +124,11 @@
             <label><input type="radio" name="q${i}" value="${j}"> ${opt}</label><br>
           `).join("")}
         `;
-        quiz.appendChild(div);
+        quizDiv.appendChild(div);
       });
     }
 
+    // --- Nộp bài và tính điểm ---
     function submitQuiz() {
       let correct = 0;
       let details = "";
@@ -180,62 +145,9 @@
           details += `<p class='answer'>Chưa chọn câu ${i+1}. Đáp án đúng: ${q.options[q.correct]}</p>`;
         }
       });
-      result.innerHTML = `<p>Kết quả: ${correct}/${questions.length} câu đúng</p>${details}`;
-    }
 
-    // --- Trang Admin ---
-    function loadQuestionList() {
-      questionList.innerHTML = questions.map((q, i) => `
-        <div class="question">
-          <b>${q.q}</b><br>
-          <small>${q.options.join(" | ")}</small><br>
-          <small>Đáp án đúng: ${q.correct}</small><br>
-          <button onclick="editQuestion(${i})">Sửa</button>
-          <button onclick="deleteQuestion(${i})">Xóa</button>
-        </div>
-        <hr>
-      `).join("");
-    }
-
-    function addOrUpdateQuestion() {
-      const text = newQuestion.value.trim();
-      const opts = newOptions.value.split(",").map(o => o.trim());
-      const correct = parseInt(correctIndex.value);
-      if (!text || opts.length !== 4 || isNaN(correct)) {
-        alert("Vui lòng nhập đầy đủ và chính xác!");
-        return;
-      }
-
-      if (editingIndex >= 0) {
-        questions[editingIndex] = { q: text, options: opts, correct };
-        editingIndex = -1;
-      } else {
-        questions.push({ q: text, options: opts, correct });
-      }
-
-      saveQuestions();
-      loadQuestionList();
-      newQuestion.value = "";
-      newOptions.value = "";
-      correctIndex.value = "";
-      alert("Đã lưu câu hỏi!");
-    }
-
-    let editingIndex = -1;
-    function editQuestion(i) {
-      const q = questions[i];
-      newQuestion.value = q.q;
-      newOptions.value = q.options.join(", ");
-      correctIndex.value = q.correct;
-      editingIndex = i;
-    }
-
-    function deleteQuestion(i) {
-      if (confirm("Xóa câu hỏi này?")) {
-        questions.splice(i, 1);
-        saveQuestions();
-        loadQuestionList();
-      }
+      const resultText = `Kết quả: ${correct}/${questions.length} câu đúng`;
+      document.getElementById("result").innerHTML = resultText + "<br>" + details;
     }
   </script>
 </body>
