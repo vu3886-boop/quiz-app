@@ -1,209 +1,379 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quiz App</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quiz App - Admin cập nhật câu hỏi</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f3f4f6;
-      color: #333;
-      padding: 20px;
-      max-width: 700px;
-      margin: auto;
-    }
-    h1, h2 {
-      text-align: center;
-    }
-    .hidden {
-      display: none;
-    }
-    .btn {
-      padding: 8px 14px;
-      background: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-top: 8px;
-    }
-    .btn:hover {
-      background: #1e40af;
-    }
-    input, textarea {
-      width: 100%;
-      padding: 6px;
-      margin: 4px 0;
-    }
-    .question {
-      background: white;
-      padding: 10px;
-      border-radius: 6px;
-      margin: 10px 0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .result {
-      font-weight: bold;
-      color: green;
-      margin-top: 10px;
-    }
+    body { font-family: Arial, sans-serif; background:#f4f6f8; color:#222; margin:0; padding:20px; }
+    .wrap { max-width:900px; margin:20px auto; background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.08); }
+    h1,h2 { text-align:center; }
+    input, textarea, button { font-family: Arial, sans-serif; }
+    input, textarea { width:100%; padding:8px; margin:6px 0; box-sizing:border-box; }
+    .btn { display:inline-block; padding:8px 12px; background:#2563eb; color:#fff; border:none; border-radius:6px; cursor:pointer; }
+    .btn.red { background:#dc3545; }
+    .section { margin:18px 0; }
+    .question { background:#fff; padding:10px; border-radius:6px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+    .flex { display:flex; gap:10px; align-items:center; }
+    .small { font-size:13px; color:#555; }
+    .result { margin-top:10px; font-weight:600; color:green; }
+    pre { background:#f8fafc; padding:10px; border-radius:6px; overflow:auto; }
   </style>
 </head>
 <body>
-  <h1>Quiz App</h1>
+  <div class="wrap">
+    <h1>Quiz App</h1>
 
-  <div id="loginDiv">
-    <h2>Đăng nhập</h2>
-    <input type="text" id="username" placeholder="Tài khoản">
-    <input type="password" id="password" placeholder="Mật khẩu">
-    <button class="btn" onclick="login()">Đăng nhập</button>
+    <!-- LOGIN -->
+    <div id="loginSection" class="section">
+      <h2>Đăng nhập</h2>
+      <input id="inUser" placeholder="Tài khoản (admin / khach1 / khach2...)" />
+      <input id="inPass" placeholder="Mật khẩu" />
+      <div class="flex">
+        <button class="btn" onclick="doLogin()">Đăng nhập</button>
+        <button class="btn" onclick="doRegister()">Đăng ký khách (mật khẩu mặc định 1234)</button>
+      </div>
+      <p class="small">Admin mặc định: <b>admin</b> / <b>1234</b></p>
+    </div>
+
+    <!-- QUIZ FOR USER -->
+    <div id="quizSection" class="section" style="display:none;">
+      <h2>Bài trắc nghiệm</h2>
+      <div id="quizContainer"></div>
+      <div class="flex">
+        <button id="submitBtn" class="btn" onclick="submitQuiz()">Nộp bài</button>
+        <button id="logoutBtn" class="btn red" onclick="doLogout()">Đăng xuất</button>
+      </div>
+      <div id="userResult" class="result"></div>
+    </div>
+
+    <!-- ADMIN PANEL -->
+    <div id="adminSection" class="section" style="display:none;">
+      <h2>Admin - Quản lý câu hỏi & kết quả</h2>
+
+      <div style="display:flex; gap:10px; align-items:flex-start;">
+        <div style="flex:1;">
+          <p class="small">Soạn / Dán JSON bộ câu hỏi ở đây (mảng object):</p>
+          <textarea id="questionsTextarea" rows="12" placeholder='Ví dụ: [{"question":"...","options":["a","b","c","d"],"answer":0}]'></textarea>
+          <div style="margin-top:8px;">
+            <button class="btn" onclick="adminSaveQuestions()">Lưu câu hỏi</button>
+            <button class="btn" onclick="adminReloadDefault()">Tải mẫu mặc định</button>
+          </div>
+        </div>
+
+        <div style="width:360px;">
+          <p class="small">Danh sách câu hỏi (live):</p>
+          <div id="adminList" style="max-height:360px; overflow:auto; border:1px solid #eee; padding:8px; border-radius:6px;"></div>
+        </div>
+      </div>
+
+      <hr />
+
+      <h3>Kết quả người dùng</h3>
+      <div id="resultsContainer" style="min-height:60px;"></div>
+      <div style="margin-top:8px;">
+        <button class="btn" onclick="adminExportCSV()">Xuất CSV kết quả</button>
+        <button class="btn red" onclick="adminClearResults()">Xóa toàn bộ kết quả</button>
+        <button class="btn" onclick="adminResetUserSubmissions()">Reset trạng thái đã nộp (cho phép khách nộp lại)</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <button class="btn red" onclick="doLogout()">Đăng xuất admin</button>
+      </div>
+    </div>
   </div>
 
-  <div id="quizDiv" class="hidden">
-    <h2>Bài trắc nghiệm</h2>
-    <div id="quizContainer"></div>
-    <button class="btn" id="submitBtn" onclick="submitQuiz()">Nộp bài</button>
-    <div id="resultDiv" class="result"></div>
-    <button class="btn hidden" id="resetBtn" onclick="resetQuiz()">Làm lại</button>
-  </div>
+<script>
+/*
+  Hướng dẫn:
+  - Admin đăng nhập bằng: admin / 1234
+  - Khách có thể register bằng nút "Đăng ký khách" (mật khẩu mặc định 1234)
+  - Admin dán JSON câu hỏi rồi ấn "Lưu câu hỏi" → cập nhật ngay biến questions + localStorage + UI
+  - Admin có thể xuất CSV kết quả, xóa kết quả, reset trạng thái nộp
+*/
 
-  <div id="adminDiv" class="hidden">
-    <h2>Quản lý câu hỏi</h2>
-    <textarea id="questionsInput" rows="10"></textarea>
-    <button class="btn" onclick="saveQuestions()">Cập nhật câu hỏi</button>
+// ---------- dữ liệu khởi tạo ----------
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "1234";
+const DEFAULT_QUESTIONS = [
+  { question: "Thủ đô của Việt Nam là?", options: ["Hà Nội","TP.HCM","Đà Nẵng","Huế"], answer: 0 },
+  { question: "2 + 2 = ?", options: ["3","4","5","22"], answer: 1 }
+];
 
-    <h3>Kết quả người dùng</h3>
-    <div id="resultsContainer"></div>
-    <button class="btn" onclick="clearResults()">Xóa toàn bộ kết quả</button>
-  </div>
+// lưu users: object { username: { password, submitted(boolean), score } }
+let users = JSON.parse(localStorage.getItem("qa_users") || "{}");
 
-  <script>
-    const users = {
-      admin: "123",
-      khach1: "111",
-      khach2: "222"
+// lưu questions
+let questions = JSON.parse(localStorage.getItem("qa_questions") || "null");
+if (!questions) {
+  questions = DEFAULT_QUESTIONS.slice();
+  localStorage.setItem("qa_questions", JSON.stringify(questions));
+}
+
+// lưu results per user in users[...] as submitted/score fields (kept in qa_users)
+
+// state
+let currentUser = null;
+
+// ---------- UI helpers ----------
+function show(id) { document.getElementById(id).style.display = ""; }
+function hide(id) { document.getElementById(id).style.display = "none"; }
+
+// ---------- render functions ----------
+function renderQuiz() {
+  const container = document.getElementById("quizContainer");
+  container.innerHTML = "";
+  questions.forEach((q,i) => {
+    const wrap = document.createElement("div");
+    wrap.className = "question";
+    let html = `<p><b>Câu ${i+1}:</b> ${escapeHtml(q.question)}</p>`;
+    q.options.forEach((opt,j) => {
+      html += `<label><input type="radio" name="q${i}" value="${j}"> ${escapeHtml(opt)}</label><br>`;
+    });
+    wrap.innerHTML = html;
+    container.appendChild(wrap);
+  });
+  // reset userResult and submit button enabled state depending on user status
+  const u = users[currentUser];
+  if (u && u.submitted) {
+    document.getElementById("userResult").innerText = `Bạn đã nộp: ${u.score}/${questions.length} câu đúng.`;
+    document.getElementById("submitBtn").disabled = true;
+  } else {
+    document.getElementById("userResult").innerText = "";
+    document.getElementById("submitBtn").disabled = false;
+  }
+}
+
+function renderAdminList() {
+  const el = document.getElementById("adminList");
+  el.innerHTML = "";
+  questions.forEach((q,i) => {
+    const div = document.createElement("div");
+    div.style.padding = "6px 4px";
+    div.innerHTML = `<b>${i+1}.</b> ${escapeHtml(q.question)}<br><small>${q.options.map(o=>escapeHtml(o)).join(" | ")}</small><br><span class="small">Đáp án: ${q.answer}</span>
+      <div style="margin-top:6px;">
+        <button class="btn" onclick="adminEditQuestion(${i})">Sửa</button>
+        <button class="btn red" onclick="adminDeleteQuestion(${i})">Xóa</button>
+      </div>
+      <hr>`;
+    el.appendChild(div);
+  });
+}
+
+function renderQuestionsTextarea() {
+  document.getElementById("questionsTextarea").value = JSON.stringify(questions, null, 2);
+}
+
+function renderResults() {
+  const c = document.getElementById("resultsContainer");
+  c.innerHTML = "";
+  const keys = Object.keys(users);
+  if (keys.length === 0) { c.innerHTML = "<i>Chưa có user nào</i>"; return; }
+  keys.forEach(u => {
+    const data = users[u];
+    const p = document.createElement("div");
+    p.innerHTML = `<b>${escapeHtml(u)}</b>: ${data.submitted ? data.score + "/" + questions.length + " (Đã nộp)" : "Chưa nộp" } 
+      <button class="btn" style="margin-left:8px;" onclick="adminClearUserResult('${u}')">Xóa kết quả</button>`;
+    c.appendChild(p);
+  });
+}
+
+// ---------- auth / navigation ----------
+function doRegister() {
+  const username = document.getElementById("inUser").value.trim();
+  if (!username) { alert("Nhập tên tài khoản"); return; }
+  if (username === ADMIN_USER) { alert("Không được tạo trùng admin"); return; }
+  if (users[username]) { alert("Tài khoản đã tồn tại"); return; }
+  users[username] = { password: "1234", submitted: false, score: 0 };
+  localStorage.setItem("qa_users", JSON.stringify(users));
+  alert("Đã tạo tài khoản " + username + " (mật khẩu 1234). Hãy đăng nhập.");
+}
+
+function doLogin() {
+  const username = document.getElementById("inUser").value.trim();
+  const pass = document.getElementById("inPass").value.trim();
+  if (!username || !pass) { alert("Nhập tài khoản và mật khẩu"); return; }
+
+  if (username === ADMIN_USER && pass === ADMIN_PASS) {
+    currentUser = ADMIN_USER;
+    // show admin
+    hide("loginSection");
+    show("adminSection");
+    hide("quizSection");
+    renderQuestionsTextarea();
+    renderAdminList();
+    renderResults();
+    return;
+  }
+
+  const u = users[username];
+  if (!u) { alert("Tài khoản không tồn tại. Hãy đăng ký bằng nút Register hoặc liên hệ admin."); return; }
+  if (u.password !== pass) { alert("Sai mật khẩu"); return; }
+
+  // success login as guest
+  currentUser = username;
+  hide("loginSection");
+  hide("adminSection");
+  show("quizSection");
+  renderQuiz();
+}
+
+function doLogout() {
+  currentUser = null;
+  show("loginSection");
+  hide("quizSection");
+  hide("adminSection");
+  document.getElementById("inUser").value = "";
+  document.getElementById("inPass").value = "";
+}
+
+// ---------- admin: questions CRUD ----------
+function adminSaveQuestions() {
+  const txt = document.getElementById("questionsTextarea").value.trim();
+  if (!txt) { alert("Textarea rỗng"); return; }
+  try {
+    const parsed = JSON.parse(txt);
+    if (!Array.isArray(parsed)) throw new Error("Phải là mảng JSON");
+    // validate minimal structure
+    for (const it of parsed) {
+      if (typeof it.question !== "string" || !Array.isArray(it.options) || typeof it.answer !== "number')") {
+        // the above check contains single quote error to avoid run-time; we'll do robust check below
+      }
+    }
+    // robust validation:
+    for (const it of parsed) {
+      if (typeof it.question !== "string") throw new Error("Mỗi phần tử cần field 'question' (chuỗi).");
+      if (!Array.isArray(it.options) || it.options.length < 2) throw new Error("Mỗi phần tử cần 'options' là mảng ít nhất 2 phần tử.");
+      if (typeof it.answer !== "number" || it.answer < 0 || it.answer >= it.options.length) throw new Error("Field 'answer' phải là số hợp lệ (index).");
+    }
+
+    questions = parsed;
+    localStorage.setItem("qa_questions", JSON.stringify(questions));
+    renderAdminList();
+    renderQuestionsTextarea();
+    // If a user currently viewing quiz, update their UI too
+    if (document.getElementById("quizSection").style.display !== "none") {
+      renderQuiz();
+    }
+    alert("Lưu thành công. Câu hỏi đã được cập nhật.");
+  } catch (e) {
+    alert("Lỗi khi phân tích JSON: " + e.message);
+  }
+}
+
+// admin helper: load default sample
+function adminReloadDefault() {
+  questions = DEFAULT_QUESTIONS.slice();
+  localStorage.setItem("qa_questions", JSON.stringify(questions));
+  renderQuestionsTextarea();
+  renderAdminList();
+  alert("Đã tải bộ câu hỏi mặc định.");
+}
+
+function adminEditQuestion(i) {
+  // fill textarea and scroll to top for editing convenience
+  renderQuestionsTextarea();
+  // highlight the question in textarea for editing (simple way: open with cursor)
+  document.getElementById("questionsTextarea").focus();
+  alert("Để sửa câu "+(i+1)+", hãy sửa JSON trong khung bên trái rồi bấm 'Lưu câu hỏi'.");
+}
+
+function adminDeleteQuestion(i) {
+  if (!confirm("Xóa câu hỏi thứ " + (i+1) + " ?")) return;
+  questions.splice(i,1);
+  localStorage.setItem("qa_questions", JSON.stringify(questions));
+  renderAdminList();
+  renderQuestionsTextarea();
+  if (document.getElementById("quizSection").style.display !== "none") renderQuiz();
+}
+
+// ---------- admin: results handling ----------
+function adminExportCSV() {
+  const results = JSON.parse(localStorage.getItem("qa_users") || "{}");
+  // create CSV: username,submitted,score
+  let rows = [["username","submitted","score"]];
+  for (const [u, data] of Object.entries(results)) {
+    rows.push([u, data.submitted ? "yes":"no", data.score || 0]);
+  }
+  const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "quiz_results.csv"; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
+}
+
+function adminClearResults() {
+  if (!confirm("Xóa toàn bộ kết quả người dùng (không xóa tài khoản)?")) return;
+  for (const k of Object.keys(users)) {
+    users[k].submitted = false;
+    users[k].score = 0;
+  }
+  localStorage.setItem("qa_users", JSON.stringify(users));
+  renderResults();
+  alert("Đã xóa kết quả của tất cả user.");
+}
+
+function adminClearUserResult(username) {
+  if (!confirm("Xóa kết quả của " + username + " ?")) return;
+  if (users[username]) { users[username].submitted = false; users[username].score = 0; localStorage.setItem("qa_users", JSON.stringify(users)); renderResults(); alert("Đã xóa."); }
+}
+
+function adminResetUserSubmissions() {
+  if (!confirm("Reset trạng thái đã nộp của tất cả user (cho phép họ nộp lại)?")) return;
+  for (const k of Object.keys(users)) {
+    users[k].submitted = false;
+    users[k].score = 0;
+  }
+  localStorage.setItem("qa_users", JSON.stringify(users));
+  renderResults();
+  alert("Đã reset trạng thái nộp.");
+}
+
+// ---------- user: quiz flow ----------
+function submitQuiz() {
+  if (!currentUser) return alert("Phiên đã hết.");
+  if (!users[currentUser]) return alert("Người dùng không hợp lệ.");
+  if (users[currentUser].submitted) return alert("Bạn đã nộp rồi.");
+
+  let correct = 0;
+  for (let i=0;i<questions.length;i++){
+    const sel = document.querySelector(`input[name='q${i}']:checked`);
+    if (sel && parseInt(sel.value,10) === questions[i].answer) correct++;
+  }
+  users[currentUser].submitted = true;
+  users[currentUser].score = correct;
+  localStorage.setItem("qa_users", JSON.stringify(users));
+  document.getElementById("userResult").innerText = `Bạn trả lời đúng ${correct}/${questions.length} câu.`;
+  document.getElementById("submitBtn").disabled = true;
+  renderResults(); // update admin view if open
+}
+
+// ---------- util ----------
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ---------- initialization ----------
+function init() {
+  // ensure admin exists in users map? admin is special, do not store as qa_users
+  // ensure local users structure exists
+  if (!localStorage.getItem("qa_users")) {
+    // pre-create sample guest users if none
+    users = {
+      "guest1": { password: "1234", submitted: false, score: 0},
+      "guest2": { password: "1234", submitted: false, score: 0}
     };
+    localStorage.setItem("qa_users", JSON.stringify(users));
+  } else {
+    users = JSON.parse(localStorage.getItem("qa_users"));
+  }
 
-    let currentUser = null;
-    let questions = JSON.parse(localStorage.getItem("questions")) || [
-      {
-        question: "1 + 1 = ?",
-        options: ["1", "2", "3", "4"],
-        answer: 1
-      },
-      {
-        question: "Thủ đô của Việt Nam là?",
-        options: ["Hà Nội", "Huế", "Đà Nẵng", "Sài Gòn"],
-        answer: 0
-      }
-    ];
+  // initial render admin lists & textarea
+  renderAdminList();
+  renderQuestionsTextarea();
+  renderResults();
+}
 
-    function login() {
-      const u = document.getElementById("username").value.trim();
-      const p = document.getElementById("password").value.trim();
-      if (users[u] && users[u] === p) {
-        currentUser = u;
-        localStorage.setItem("currentUser", u);
-        document.getElementById("loginDiv").classList.add("hidden");
-
-        if (u === "admin") {
-          document.getElementById("adminDiv").classList.remove("hidden");
-          document.getElementById("questionsInput").value = JSON.stringify(questions, null, 2);
-          loadResults();
-        } else {
-          loadQuiz();
-        }
-      } else {
-        alert("Sai tài khoản hoặc mật khẩu!");
-      }
-    }
-
-    function loadQuiz() {
-      document.getElementById("quizDiv").classList.remove("hidden");
-      const container = document.getElementById("quizContainer");
-      container.innerHTML = "";
-
-      const userResult = JSON.parse(localStorage.getItem("results") || "{}")[currentUser];
-      if (userResult) {
-        document.getElementById("resultDiv").textContent = `Bạn đã làm: ${userResult.correct}/${questions.length} câu đúng.`;
-        document.getElementById("submitBtn").classList.add("hidden");
-        document.getElementById("resetBtn").classList.remove("hidden");
-        return;
-      }
-
-      questions.forEach((q, i) => {
-        const div = document.createElement("div");
-        div.className = "question";
-        div.innerHTML = `<p><b>Câu ${i + 1}:</b> ${q.question}</p>`;
-        q.options.forEach((opt, j) => {
-          div.innerHTML += `
-            <label>
-              <input type="radio" name="q${i}" value="${j}"> ${opt}
-            </label><br>
-          `;
-        });
-        container.appendChild(div);
-      });
-    }
-
-    function submitQuiz() {
-      let correct = 0;
-      questions.forEach((q, i) => {
-        const selected = document.querySelector(`input[name='q${i}']:checked`);
-        if (selected && parseInt(selected.value) === q.answer) {
-          correct++;
-        }
-      });
-      document.getElementById("resultDiv").textContent = `Bạn làm đúng ${correct}/${questions.length} câu.`;
-
-      // Lưu kết quả
-      const results = JSON.parse(localStorage.getItem("results") || "{}");
-      results[currentUser] = { correct };
-      localStorage.setItem("results", JSON.stringify(results));
-
-      document.getElementById("submitBtn").classList.add("hidden");
-      document.getElementById("resetBtn").classList.remove("hidden");
-    }
-
-    function resetQuiz() {
-      const results = JSON.parse(localStorage.getItem("results") || "{}");
-      delete results[currentUser];
-      localStorage.setItem("results", JSON.stringify(results));
-      loadQuiz();
-      document.getElementById("resultDiv").textContent = "";
-      document.getElementById("submitBtn").classList.remove("hidden");
-      document.getElementById("resetBtn").classList.add("hidden");
-    }
-
-    function saveQuestions() {
-      try {
-        const newQs = JSON.parse(document.getElementById("questionsInput").value);
-        questions = newQs;
-        localStorage.setItem("questions", JSON.stringify(questions));
-        alert("Đã cập nhật câu hỏi!");
-      } catch {
-        alert("Dữ liệu không hợp lệ!");
-      }
-    }
-
-    function loadResults() {
-      const container = document.getElementById("resultsContainer");
-      const results = JSON.parse(localStorage.getItem("results") || "{}");
-      container.innerHTML = "";
-      for (const [user, data] of Object.entries(results)) {
-        const p = document.createElement("p");
-        p.textContent = `${user}: ${data.correct}/${questions.length} câu đúng`;
-        container.appendChild(p);
-      }
-    }
-
-    function clearResults() {
-      if (confirm("Xóa toàn bộ kết quả người dùng?")) {
-        localStorage.removeItem("results");
-        loadResults();
-      }
-    }
-  </script>
+init();
+</script>
 </body>
 </html>
