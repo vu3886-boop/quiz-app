@@ -1,271 +1,279 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <title>Quiz App - Admin & Guest</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz App</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f4f6f8;
+      background: #f4f4f4;
       margin: 0;
-      padding: 0;
+      padding: 20px;
     }
     .container {
       max-width: 700px;
-      margin: 40px auto;
-      background: #fff;
+      margin: auto;
+      background: white;
+      padding: 20px;
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      padding: 20px;
     }
     h1, h2 {
       text-align: center;
     }
     input, button, textarea {
       font-family: Arial, sans-serif;
-      padding: 8px;
-      margin: 5px 0;
-      width: 100%;
-      box-sizing: border-box;
     }
     button {
-      cursor: pointer;
       background: #007bff;
       color: white;
       border: none;
+      padding: 10px 15px;
       border-radius: 5px;
-      padding: 10px;
+      cursor: pointer;
+      margin: 5px 0;
     }
     button:hover {
       background: #0056b3;
     }
-    .hidden { display: none; }
-    .question {
-      border: 1px solid #ddd;
-      padding: 10px;
-      border-radius: 6px;
-      margin-bottom: 10px;
+    .hidden {
+      display: none;
     }
-    .answers label { display: block; }
-    .admin-actions {
-      display: flex;
-      justify-content: space-between;
+    .question {
+      margin-bottom: 15px;
     }
     .result {
-      text-align: center;
       font-weight: bold;
+      text-align: center;
       margin-top: 20px;
+      color: green;
+    }
+    .score-list {
+      background: #fafafa;
+      border-radius: 5px;
+      padding: 10px;
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
-  <div class="container" id="loginContainer">
-    <h1>Đăng nhập</h1>
-    <input type="text" id="username" placeholder="Tài khoản">
-    <input type="password" id="password" placeholder="Mật khẩu">
-    <button onclick="login()">Đăng nhập</button>
-    <p id="loginMessage" style="color:red;text-align:center;"></p>
-  </div>
+  <div class="container">
+    <h1>Hệ thống trắc nghiệm</h1>
 
-  <div class="container hidden" id="adminContainer">
-    <h2>Chào mừng Admin</h2>
-    <div id="questionList"></div>
-    <h3>Thêm câu hỏi mới</h3>
-    <input type="text" id="newQuestion" placeholder="Nội dung câu hỏi">
-    <textarea id="newAnswers" placeholder="Nhập 4 đáp án, mỗi đáp án trên 1 dòng"></textarea>
-    <input type="number" id="newCorrect" min="1" max="4" placeholder="Đáp án đúng (1-4)">
-    <button onclick="addQuestion()">Thêm câu hỏi</button>
-    <button onclick="logout()">Đăng xuất</button>
-  </div>
+    <!-- Đăng nhập -->
+    <div id="loginScreen">
+      <h2>Đăng nhập</h2>
+      <input type="text" id="username" placeholder="Tên đăng nhập" /><br />
+      <input type="password" id="password" placeholder="Mật khẩu" /><br />
+      <button onclick="login()">Đăng nhập</button>
+      <p><small>Tài khoản admin: <b>admin / 1234</b></small></p>
+      <p><small>Tài khoản khách: <b>guest1 / 1234</b>, <b>guest2 / 1234</b>...</small></p>
+    </div>
 
-  <div class="container hidden" id="quizContainer">
-    <h2>Bài trắc nghiệm</h2>
-    <div id="quizQuestions"></div>
-    <button id="submitBtn" onclick="submitQuiz()">Nộp bài</button>
-    <button id="resetBtn" class="hidden" onclick="resetQuiz()">Làm lại</button>
-    <div class="result" id="resultDisplay"></div>
-    <button onclick="logout()">Đăng xuất</button>
+    <!-- Làm bài -->
+    <div id="quizScreen" class="hidden">
+      <h2>Bài trắc nghiệm</h2>
+      <div id="questionList"></div>
+      <button id="submitBtn" onclick="submitQuiz()">Nộp bài</button>
+      <div class="result" id="result"></div>
+    </div>
+
+    <!-- Quản trị -->
+    <div id="adminPanel" class="hidden">
+      <h2>Quản lý câu hỏi</h2>
+      <div id="adminQuestions"></div>
+
+      <h3>Thêm câu hỏi mới</h3>
+      <textarea id="newQuestionText" placeholder="Nhập câu hỏi..."></textarea><br />
+      <input id="newOptionA" placeholder="Đáp án A" /><br />
+      <input id="newOptionB" placeholder="Đáp án B" /><br />
+      <input id="newOptionC" placeholder="Đáp án C" /><br />
+      <input id="newOptionD" placeholder="Đáp án D" /><br />
+      <input id="newCorrect" placeholder="Đáp án đúng (A/B/C/D)" /><br />
+      <button onclick="addQuestion()">Thêm câu hỏi</button>
+      <hr>
+      <h3>Kết quả người dùng</h3>
+      <div id="scoreList" class="score-list"></div>
+      <button onclick="resetAllScores()">🔄 Reset tất cả kết quả</button>
+    </div>
+
   </div>
 
   <script>
-    const defaultQuestions = [
-      { q: "Thủ đô của Việt Nam là gì?", a: ["Hà Nội", "Hồ Chí Minh", "Đà Nẵng", "Huế"], correct: 1 },
-      { q: "2 + 2 = ?", a: ["3", "4", "5", "2"], correct: 2 }
+    let questions = JSON.parse(localStorage.getItem("questions")) || [
+      { text: "Thủ đô của Việt Nam là?", options: ["Hà Nội", "TP.HCM", "Đà Nẵng", "Huế"], answer: "A" },
+      { text: "1 + 1 = ?", options: ["1", "2", "3", "4"], answer: "B" }
     ];
-    const users = {
-      admin: "1234",
-      guest: "1234"
-    };
-    const questionsKey = "quiz_questions";
-    const resultsKey = "quiz_results";
 
-    function getQuestions() {
-      const data = localStorage.getItem(questionsKey);
-      return data ? JSON.parse(data) : defaultQuestions;
+    let scores = JSON.parse(localStorage.getItem("scores")) || {}; // lưu điểm từng người
+    let currentUser = null;
+    let submitted = false;
+
+    function saveQuestions() {
+      localStorage.setItem("questions", JSON.stringify(questions));
     }
-    function saveQuestions(list) {
-      localStorage.setItem(questionsKey, JSON.stringify(list));
+
+    function saveScores() {
+      localStorage.setItem("scores", JSON.stringify(scores));
     }
 
     function login() {
-      const u = username.value.trim();
-      const p = password.value.trim();
-      if (users[u] && users[u] === p) {
-        localStorage.setItem("loggedUser", u);
-        document.getElementById("loginContainer").classList.add("hidden");
-        if (u === "admin") showAdmin();
-        else showQuiz();
+      const user = document.getElementById("username").value.trim();
+      const pass = document.getElementById("password").value.trim();
+
+      if (user === "admin" && pass === "1234") {
+        currentUser = "admin";
+        showAdminPanel();
+      } else if (pass === "1234" && user.startsWith("guest")) {
+        currentUser = user;
+        if (scores[user] && scores[user].submitted) {
+          alert("Tài khoản này đã nộp bài rồi!");
+          showResultAfterLogin();
+        } else {
+          showQuiz();
+        }
       } else {
-        loginMessage.textContent = "Sai tài khoản hoặc mật khẩu!";
+        alert("Sai tài khoản hoặc mật khẩu!");
       }
     }
 
-    function logout() {
-      localStorage.removeItem("loggedUser");
-      location.reload();
+    // ============================
+    //        MÀN HÌNH ADMIN
+    // ============================
+    function showAdminPanel() {
+      document.getElementById("loginScreen").classList.add("hidden");
+      document.getElementById("adminPanel").classList.remove("hidden");
+      loadAdminQuestions();
+      loadScoreList();
     }
 
-    // ==== ADMIN ====
-    function showAdmin() {
-      adminContainer.classList.remove("hidden");
-      renderQuestionsAdmin();
-    }
-
-    function renderQuestionsAdmin() {
-      const qList = getQuestions();
-      const div = document.getElementById("questionList");
-      div.innerHTML = "";
-      qList.forEach((q, i) => {
-        div.innerHTML += `
-          <div class="question">
-            <b>Câu ${i+1}:</b> <input type="text" value="${q.q}" onchange="updateQuestion(${i}, this.value)">
-            <div>
-              ${q.a.map((ans, idx) => `
-                <input type="text" value="${ans}" onchange="updateAnswer(${i}, ${idx}, this.value)">
-              `).join('')}
-            </div>
-            <label>Đáp án đúng:
-              <input type="number" min="1" max="4" value="${q.correct}" onchange="updateCorrect(${i}, this.value)">
-            </label>
-            <div class="admin-actions">
-              <button onclick="deleteQuestion(${i})">Xóa</button>
-            </div>
-          </div>
+    function loadAdminQuestions() {
+      const container = document.getElementById("adminQuestions");
+      container.innerHTML = "";
+      questions.forEach((q, i) => {
+        const div = document.createElement("div");
+        div.classList.add("question");
+        div.innerHTML = `
+          <textarea onchange="updateQuestion(${i}, this.value)">${q.text}</textarea><br>
+          ${["A","B","C","D"].map((opt, idx) => `
+            <input value="${q.options[idx]}" onchange="updateOption(${i}, ${idx}, this.value)" /> (${opt})
+          `).join("<br>")}<br>
+          Đáp án đúng: <input value="${q.answer}" onchange="updateAnswer(${i}, this.value.toUpperCase())" /><br>
+          <button onclick="deleteQuestion(${i})">Xóa</button>
+          <hr>
         `;
+        container.appendChild(div);
       });
     }
 
-    function updateQuestion(index, newText) {
-      const qList = getQuestions();
-      qList[index].q = newText;
-      saveQuestions(qList);
-    }
-    function updateAnswer(qIndex, aIndex, newText) {
-      const qList = getQuestions();
-      qList[qIndex].a[aIndex] = newText;
-      saveQuestions(qList);
-    }
-    function updateCorrect(index, val) {
-      const qList = getQuestions();
-      qList[index].correct = parseInt(val);
-      saveQuestions(qList);
-    }
-    function deleteQuestion(index) {
-      const qList = getQuestions();
-      qList.splice(index, 1);
-      saveQuestions(qList);
-      renderQuestionsAdmin();
-    }
-    function addQuestion() {
-      const qText = newQuestion.value.trim();
-      const answers = newAnswers.value.trim().split("\n");
-      const correct = parseInt(newCorrect.value);
-      if (!qText || answers.length < 4 || !correct) {
-        alert("Vui lòng nhập đầy đủ câu hỏi và đáp án!");
+    function loadScoreList() {
+      const container = document.getElementById("scoreList");
+      const users = Object.keys(scores);
+      if (users.length === 0) {
+        container.innerHTML = "<i>Chưa có ai làm bài</i>";
         return;
       }
-      const qList = getQuestions();
-      qList.push({ q: qText, a: answers, correct });
-      saveQuestions(qList);
-      newQuestion.value = "";
-      newAnswers.value = "";
-      newCorrect.value = "";
-      renderQuestionsAdmin();
+      container.innerHTML = users.map(u => `
+        <p><b>${u}</b>: ${scores[u].score}/${questions.length} (${scores[u].submitted ? "Đã nộp" : "Chưa nộp"})</p>
+      `).join("");
     }
 
-    // ==== QUIZ ====
-    function showQuiz() {
-      quizContainer.classList.remove("hidden");
-      renderQuiz();
+    function updateQuestion(i, val) {
+      questions[i].text = val;
+      saveQuestions();
     }
 
-    function renderQuiz() {
-      const qList = getQuestions();
-      const div = document.getElementById("quizQuestions");
-      div.innerHTML = "";
-      qList.forEach((q, i) => {
-        div.innerHTML += `
-          <div class="question">
-            <b>Câu ${i+1}:</b> ${q.q}
-            <div class="answers">
-              ${q.a.map((ans, idx) => `
-                <label><input type="radio" name="q${i}" value="${idx+1}"> ${ans}</label>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      });
-      const user = localStorage.getItem("loggedUser");
-      const results = JSON.parse(localStorage.getItem(resultsKey) || "{}");
-      if (results[user]?.submitted) {
-        showResult(results[user].score, qList.length);
-        disableQuiz();
+    function updateOption(i, idx, val) {
+      questions[i].options[idx] = val;
+      saveQuestions();
+    }
+
+    function updateAnswer(i, val) {
+      questions[i].answer = val;
+      saveQuestions();
+    }
+
+    function addQuestion() {
+      const text = document.getElementById("newQuestionText").value;
+      const opts = [
+        document.getElementById("newOptionA").value,
+        document.getElementById("newOptionB").value,
+        document.getElementById("newOptionC").value,
+        document.getElementById("newOptionD").value
+      ];
+      const ans = document.getElementById("newCorrect").value.toUpperCase();
+      if (!text || !opts.every(o => o) || !"ABCD".includes(ans)) {
+        alert("Vui lòng nhập đầy đủ thông tin!");
+        return;
       }
+      questions.push({ text, options: opts, answer: ans });
+      saveQuestions();
+      loadAdminQuestions();
+      alert("Đã thêm câu hỏi!");
+    }
+
+    function deleteQuestion(i) {
+      if (confirm("Xóa câu hỏi này?")) {
+        questions.splice(i, 1);
+        saveQuestions();
+        loadAdminQuestions();
+      }
+    }
+
+    function resetAllScores() {
+      if (confirm("Bạn có chắc muốn reset tất cả kết quả không?")) {
+        scores = {};
+        saveScores();
+        loadScoreList();
+        alert("Đã reset tất cả kết quả!");
+      }
+    }
+
+    // ============================
+    //        MÀN HÌNH KHÁCH
+    // ============================
+    function showQuiz() {
+      document.getElementById("loginScreen").classList.add("hidden");
+      document.getElementById("quizScreen").classList.remove("hidden");
+      const container = document.getElementById("questionList");
+      container.innerHTML = "";
+      questions.forEach((q, i) => {
+        const div = document.createElement("div");
+        div.classList.add("question");
+        div.innerHTML = `
+          <p><b>Câu ${i + 1}:</b> ${q.text}</p>
+          ${["A","B","C","D"].map((opt, idx) => `
+            <label><input type="radio" name="q${i}" value="${opt}"> ${opt}. ${q.options[idx]}</label><br>
+          `).join("")}
+        `;
+        container.appendChild(div);
+      });
     }
 
     function submitQuiz() {
-      const qList = getQuestions();
-      let correctCount = 0;
-      qList.forEach((q, i) => {
-        const chosen = document.querySelector(`input[name="q${i}"]:checked`);
-        if (chosen && parseInt(chosen.value) === q.correct) correctCount++;
+      if (submitted) return;
+      let correct = 0;
+      questions.forEach((q, i) => {
+        const ans = document.querySelector(`input[name="q${i}"]:checked`);
+        if (ans && ans.value === q.answer) correct++;
       });
-      const score = correctCount;
-      const user = localStorage.getItem("loggedUser");
-      const results = JSON.parse(localStorage.getItem(resultsKey) || "{}");
-      results[user] = { score, submitted: true };
-      localStorage.setItem(resultsKey, JSON.stringify(results));
-      showResult(score, qList.length);
-      disableQuiz();
+
+      document.getElementById("result").innerText = `Bạn trả lời đúng ${correct}/${questions.length} câu.`;
+      submitted = true;
+      document.getElementById("submitBtn").disabled = true;
+
+      scores[currentUser] = { score: correct, submitted: true };
+      saveScores();
     }
 
-    function disableQuiz() {
-      document.querySelectorAll("input[type=radio]").forEach(i => i.disabled = true);
-      submitBtn.classList.add("hidden");
-      resetBtn.classList.remove("hidden");
+    function showResultAfterLogin() {
+      document.getElementById("loginScreen").classList.add("hidden");
+      document.getElementById("quizScreen").classList.remove("hidden");
+      document.getElementById("questionList").innerHTML = "<p>Bạn đã làm bài rồi.</p>";
+      document.getElementById("submitBtn").style.display = "none";
+      document.getElementById("result").innerText = `Kết quả trước đây: ${scores[currentUser].score}/${questions.length}`;
     }
-
-    function showResult(score, total) {
-      resultDisplay.textContent = `Bạn trả lời đúng ${score}/${total} câu.`;
-    }
-
-    function resetQuiz() {
-      const user = localStorage.getItem("loggedUser");
-      const results = JSON.parse(localStorage.getItem(resultsKey) || "{}");
-      delete results[user];
-      localStorage.setItem(resultsKey, JSON.stringify(results));
-      renderQuiz();
-      resultDisplay.textContent = "";
-      resetBtn.classList.add("hidden");
-      submitBtn.classList.remove("hidden");
-    }
-
-    // ==== AUTO LOGIN RESTORE ====
-    window.onload = function() {
-      const user = localStorage.getItem("loggedUser");
-      if (user === "admin") showAdmin();
-      else if (user === "guest") showQuiz();
-    };
   </script>
 </body>
 </html>
