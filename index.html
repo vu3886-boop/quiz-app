@@ -3,17 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quiz App - Đăng nhập</title>
+  <title>Quiz App - Trắc nghiệm</title>
   <style>
-    body { font-family: sans-serif; background: #f2f2f2; margin: 0; }
-    .container { max-width: 500px; margin: 40px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    input, button, textarea { width: 100%; padding: 8px; margin: 8px 0; }
-    button { cursor: pointer; background: #4CAF50; color: white; border: none; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      margin: 0;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    input, button, textarea {
+      width: 100%;
+      padding: 8px;
+      margin: 8px 0;
+      font-family: Arial, sans-serif;
+    }
+    button {
+      cursor: pointer;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+    button:hover { background: #45a049; }
     h2, h3 { text-align: center; }
     .hidden { display: none; }
+    .result-box {
+      background: #e8ffe8;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
+  <!-- Trang đăng nhập -->
   <div class="container" id="loginPage">
     <h2>Đăng nhập / Đăng ký</h2>
     <input id="username" placeholder="Tên đăng nhập">
@@ -23,14 +56,18 @@
     <p id="msg" style="color:red"></p>
   </div>
 
+  <!-- Trang trắc nghiệm -->
   <div class="container hidden" id="quizPage">
     <h2>Bài trắc nghiệm</h2>
     <div id="questionContainer"></div>
-    <button onclick="logout()">Đăng xuất</button>
+    <button onclick="submitQuiz()">Nộp bài</button>
+    <div id="result" class="result-box hidden"></div>
     <hr>
+    <button onclick="logout()">Đăng xuất</button>
     <button onclick="showAdmin()">Quản lý câu hỏi</button>
   </div>
 
+  <!-- Trang quản lý câu hỏi -->
   <div class="container hidden" id="adminPage">
     <h2>Quản lý câu hỏi</h2>
     <textarea id="questionText" placeholder="Nội dung câu hỏi"></textarea>
@@ -46,6 +83,7 @@
   </div>
 
   <script>
+    // ===== DỮ LIỆU NGƯỜI DÙNG & CÂU HỎI =====
     const users = JSON.parse(localStorage.getItem("users") || "{}");
     const questions = JSON.parse(localStorage.getItem("questions") || "[]");
     let currentUser = localStorage.getItem("currentUser");
@@ -54,6 +92,7 @@
     const quizPage = document.getElementById("quizPage");
     const adminPage = document.getElementById("adminPage");
     const msg = document.getElementById("msg");
+    const resultBox = document.getElementById("result");
 
     function saveData() {
       localStorage.setItem("users", JSON.stringify(users));
@@ -65,15 +104,20 @@
       page.classList.remove("hidden");
     }
 
-    if (currentUser) showPage(quizPage);
+    if (currentUser) {
+      showPage(quizPage);
+      renderQuiz();
+    }
 
+    // ===== ĐĂNG KÝ / ĐĂNG NHẬP =====
     function register() {
       const u = username.value.trim();
       const p = password.value.trim();
       if (!u || !p) return msg.textContent = "Vui lòng nhập đủ thông tin";
       if (users[u]) return msg.textContent = "Tài khoản đã tồn tại";
       users[u] = p; saveData();
-      msg.textContent = "Đăng ký thành công!";
+      msg.style.color = "green";
+      msg.textContent = "Đăng ký thành công! Hãy đăng nhập.";
     }
 
     function login() {
@@ -93,6 +137,7 @@
       showPage(loginPage);
     }
 
+    // ===== HIỂN THỊ & NỘP BÀI TRẮC NGHIỆM =====
     function renderQuiz() {
       const c = document.getElementById("questionContainer");
       if (questions.length === 0) {
@@ -100,6 +145,7 @@
         return;
       }
       c.innerHTML = "";
+      resultBox.classList.add("hidden");
       questions.forEach((q, i) => {
         const div = document.createElement("div");
         div.innerHTML = `
@@ -112,6 +158,18 @@
       });
     }
 
+    function submitQuiz() {
+      let correctCount = 0;
+      questions.forEach((q, i) => {
+        const selected = document.querySelector(`input[name='q${i}']:checked`);
+        if (selected && selected.value === q.correct) correctCount++;
+      });
+      const total = questions.length;
+      resultBox.textContent = `Bạn trả lời đúng ${correctCount}/${total} câu (${Math.round(correctCount/total*100)}%)`;
+      resultBox.classList.remove("hidden");
+    }
+
+    // ===== QUẢN LÝ CÂU HỎI =====
     function showAdmin() {
       showPage(adminPage);
       renderAdmin();
