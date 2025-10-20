@@ -49,29 +49,23 @@
       margin-top: 20px;
       color: green;
     }
-    .score-list {
-      background: #fafafa;
-      border-radius: 5px;
-      padding: 10px;
-      margin-top: 15px;
-    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Hệ thống trắc nghiệm</h1>
 
-    <!-- Đăng nhập -->
+    <!-- Màn hình đăng nhập -->
     <div id="loginScreen">
       <h2>Đăng nhập</h2>
       <input type="text" id="username" placeholder="Tên đăng nhập" /><br />
       <input type="password" id="password" placeholder="Mật khẩu" /><br />
       <button onclick="login()">Đăng nhập</button>
       <p><small>Tài khoản admin: <b>admin / 1234</b></small></p>
-      <p><small>Tài khoản khách: <b>guest1 / 1234</b>, <b>guest2 / 1234</b>...</small></p>
+      <p><small>Tài khoản khách: <b>guest / 1234</b></small></p>
     </div>
 
-    <!-- Làm bài -->
+    <!-- Màn hình câu hỏi -->
     <div id="quizScreen" class="hidden">
       <h2>Bài trắc nghiệm</h2>
       <div id="questionList"></div>
@@ -79,11 +73,10 @@
       <div class="result" id="result"></div>
     </div>
 
-    <!-- Quản trị -->
+    <!-- Màn hình chỉnh sửa câu hỏi (Admin) -->
     <div id="adminPanel" class="hidden">
       <h2>Quản lý câu hỏi</h2>
       <div id="adminQuestions"></div>
-
       <h3>Thêm câu hỏi mới</h3>
       <textarea id="newQuestionText" placeholder="Nhập câu hỏi..."></textarea><br />
       <input id="newOptionA" placeholder="Đáp án A" /><br />
@@ -92,31 +85,19 @@
       <input id="newOptionD" placeholder="Đáp án D" /><br />
       <input id="newCorrect" placeholder="Đáp án đúng (A/B/C/D)" /><br />
       <button onclick="addQuestion()">Thêm câu hỏi</button>
-      <hr>
-      <h3>Kết quả người dùng</h3>
-      <div id="scoreList" class="score-list"></div>
-      <button onclick="resetAllScores()">🔄 Reset tất cả kết quả</button>
     </div>
 
   </div>
 
   <script>
+    // Dữ liệu câu hỏi mẫu
     let questions = JSON.parse(localStorage.getItem("questions")) || [
       { text: "Thủ đô của Việt Nam là?", options: ["Hà Nội", "TP.HCM", "Đà Nẵng", "Huế"], answer: "A" },
       { text: "1 + 1 = ?", options: ["1", "2", "3", "4"], answer: "B" }
     ];
 
-    let scores = JSON.parse(localStorage.getItem("scores")) || {}; // lưu điểm từng người
     let currentUser = null;
     let submitted = false;
-
-    function saveQuestions() {
-      localStorage.setItem("questions", JSON.stringify(questions));
-    }
-
-    function saveScores() {
-      localStorage.setItem("scores", JSON.stringify(scores));
-    }
 
     function login() {
       const user = document.getElementById("username").value.trim();
@@ -125,27 +106,59 @@
       if (user === "admin" && pass === "1234") {
         currentUser = "admin";
         showAdminPanel();
-      } else if (pass === "1234" && user.startsWith("guest")) {
-        currentUser = user;
-        if (scores[user] && scores[user].submitted) {
-          alert("Tài khoản này đã nộp bài rồi!");
-          showResultAfterLogin();
-        } else {
-          showQuiz();
-        }
+      } else if (user === "guest" && pass === "1234") {
+        currentUser = "guest";
+        showQuiz();
       } else {
         alert("Sai tài khoản hoặc mật khẩu!");
       }
     }
 
-    // ============================
-    //        MÀN HÌNH ADMIN
-    // ============================
+    // Hiển thị cho khách
+    function showQuiz() {
+      document.getElementById("loginScreen").classList.add("hidden");
+      document.getElementById("quizScreen").classList.remove("hidden");
+
+      const container = document.getElementById("questionList");
+      container.innerHTML = "";
+      questions.forEach((q, i) => {
+        const div = document.createElement("div");
+        div.classList.add("question");
+        div.innerHTML = `
+          <p><b>Câu ${i + 1}:</b> ${q.text}</p>
+          ${["A","B","C","D"].map((opt, idx) => `
+            <label>
+              <input type="radio" name="q${i}" value="${opt}"> ${opt}. ${q.options[idx]}
+            </label><br>
+          `).join("")}
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // Chấm điểm và hiển thị kết quả
+    function submitQuiz() {
+      if (submitted) {
+        alert("Bạn đã nộp bài rồi!");
+        return;
+      }
+
+      let correct = 0;
+      questions.forEach((q, i) => {
+        const answer = document.querySelector(`input[name="q${i}"]:checked`);
+        if (answer && answer.value === q.answer) correct++;
+      });
+
+      document.getElementById("result").innerText = `Bạn trả lời đúng ${correct}/${questions.length} câu.`;
+      submitted = true;
+      document.getElementById("submitBtn").disabled = true;
+    }
+
+    // Hiển thị cho admin
     function showAdminPanel() {
       document.getElementById("loginScreen").classList.add("hidden");
       document.getElementById("adminPanel").classList.remove("hidden");
       loadAdminQuestions();
-      loadScoreList();
     }
 
     function loadAdminQuestions() {
@@ -167,25 +180,13 @@
       });
     }
 
-    function loadScoreList() {
-      const container = document.getElementById("scoreList");
-      const users = Object.keys(scores);
-      if (users.length === 0) {
-        container.innerHTML = "<i>Chưa có ai làm bài</i>";
-        return;
-      }
-      container.innerHTML = users.map(u => `
-        <p><b>${u}</b>: ${scores[u].score}/${questions.length} (${scores[u].submitted ? "Đã nộp" : "Chưa nộp"})</p>
-      `).join("");
-    }
-
     function updateQuestion(i, val) {
       questions[i].text = val;
       saveQuestions();
     }
 
-    function updateOption(i, idx, val) {
-      questions[i].options[idx] = val;
+    function updateOption(i, optIndex, val) {
+      questions[i].options[optIndex] = val;
       saveQuestions();
     }
 
@@ -203,14 +204,16 @@
         document.getElementById("newOptionD").value
       ];
       const ans = document.getElementById("newCorrect").value.toUpperCase();
+
       if (!text || !opts.every(o => o) || !"ABCD".includes(ans)) {
-        alert("Vui lòng nhập đầy đủ thông tin!");
+        alert("Vui lòng nhập đầy đủ thông tin và đáp án hợp lệ!");
         return;
       }
+
       questions.push({ text, options: opts, answer: ans });
       saveQuestions();
       loadAdminQuestions();
-      alert("Đã thêm câu hỏi!");
+      alert("Đã thêm câu hỏi mới!");
     }
 
     function deleteQuestion(i) {
@@ -221,58 +224,8 @@
       }
     }
 
-    function resetAllScores() {
-      if (confirm("Bạn có chắc muốn reset tất cả kết quả không?")) {
-        scores = {};
-        saveScores();
-        loadScoreList();
-        alert("Đã reset tất cả kết quả!");
-      }
-    }
-
-    // ============================
-    //        MÀN HÌNH KHÁCH
-    // ============================
-    function showQuiz() {
-      document.getElementById("loginScreen").classList.add("hidden");
-      document.getElementById("quizScreen").classList.remove("hidden");
-      const container = document.getElementById("questionList");
-      container.innerHTML = "";
-      questions.forEach((q, i) => {
-        const div = document.createElement("div");
-        div.classList.add("question");
-        div.innerHTML = `
-          <p><b>Câu ${i + 1}:</b> ${q.text}</p>
-          ${["A","B","C","D"].map((opt, idx) => `
-            <label><input type="radio" name="q${i}" value="${opt}"> ${opt}. ${q.options[idx]}</label><br>
-          `).join("")}
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    function submitQuiz() {
-      if (submitted) return;
-      let correct = 0;
-      questions.forEach((q, i) => {
-        const ans = document.querySelector(`input[name="q${i}"]:checked`);
-        if (ans && ans.value === q.answer) correct++;
-      });
-
-      document.getElementById("result").innerText = `Bạn trả lời đúng ${correct}/${questions.length} câu.`;
-      submitted = true;
-      document.getElementById("submitBtn").disabled = true;
-
-      scores[currentUser] = { score: correct, submitted: true };
-      saveScores();
-    }
-
-    function showResultAfterLogin() {
-      document.getElementById("loginScreen").classList.add("hidden");
-      document.getElementById("quizScreen").classList.remove("hidden");
-      document.getElementById("questionList").innerHTML = "<p>Bạn đã làm bài rồi.</p>";
-      document.getElementById("submitBtn").style.display = "none";
-      document.getElementById("result").innerText = `Kết quả trước đây: ${scores[currentUser].score}/${questions.length}`;
+    function saveQuestions() {
+      localStorage.setItem("questions", JSON.stringify(questions));
     }
   </script>
 </body>
