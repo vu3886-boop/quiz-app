@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quiz App - Phân quyền & Điểm cao</title>
+  <title>Quiz App - Có phân quyền</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -55,17 +55,6 @@
       border-radius: 10px;
       margin-top: 20px;
     }
-    #logoutBtn {
-      margin-top: 15px;
-      background: #dc3545;
-    }
-    #logoutBtn:hover {
-      background: #b02a37;
-    }
-    .score-board {
-      color: #444;
-      margin-bottom: 15px;
-    }
   </style>
 </head>
 <body>
@@ -79,14 +68,12 @@
     <p id="loginMessage"></p>
   </div>
 
-  <!-- Trang người dùng -->
+  <!-- Trang trắc nghiệm -->
   <div class="container" id="quizPage" style="display:none;">
     <h2>Bài trắc nghiệm</h2>
-    <p class="score-board" id="highScoreText"></p>
     <div id="quiz"></div>
     <button onclick="submitQuiz()">Nộp bài</button>
     <div class="result" id="result"></div>
-    <button id="logoutBtn" onclick="logout()">Đăng xuất</button>
   </div>
 
   <!-- Trang admin -->
@@ -100,15 +87,13 @@
       <input type="number" id="correctIndex" placeholder="Vị trí đáp án đúng (0-3)" min="0" max="3"/><br>
       <button onclick="addOrUpdateQuestion()">Thêm / Cập nhật</button>
     </div>
-    <button id="logoutBtn" onclick="logout()">Đăng xuất</button>
+    <button onclick="logout()">Đăng xuất</button>
   </div>
 
   <script>
     // --- Quản lý tài khoản ---
     const adminUsername = "admin";
-    const adminPassword = "123456";
-
-    let currentUser = null;
+    const adminPassword = "123456"; // mật khẩu mẫu, bạn có thể đổi
 
     function register() {
       const user = username.value.trim();
@@ -116,43 +101,33 @@
       if (!user || !pass) return alert("Vui lòng nhập đầy đủ thông tin!");
       if (user === adminUsername) return alert("Không thể tạo tài khoản trùng với admin!");
       if (localStorage.getItem(user)) return alert("Tài khoản đã tồn tại!");
-      localStorage.setItem(user, JSON.stringify({ password: pass, highScore: 0 }));
+      localStorage.setItem(user, pass);
       alert("Đăng ký thành công!");
     }
 
     function login() {
       const user = username.value.trim();
       const pass = password.value.trim();
-      const savedData = localStorage.getItem(user);
+      const saved = localStorage.getItem(user);
       if (user === adminUsername && pass === adminPassword) {
-        currentUser = adminUsername;
+        // admin đăng nhập
         loginPage.style.display = "none";
         adminPage.style.display = "block";
         loadQuestionList();
-      } else if (savedData) {
-        const data = JSON.parse(savedData);
-        if (data.password === pass) {
-          currentUser = user;
-          loginPage.style.display = "none";
-          quizPage.style.display = "block";
-          loadQuiz();
-          showHighScore();
-        } else {
-          loginMessage.innerText = "Sai mật khẩu!";
-        }
+      } else if (saved && saved === pass) {
+        // người dùng thường
+        loginPage.style.display = "none";
+        quizPage.style.display = "block";
+        loadQuiz();
       } else {
-        loginMessage.innerText = "Tài khoản không tồn tại!";
+        loginMessage.innerText = "Sai tài khoản hoặc mật khẩu!";
       }
     }
 
     function logout() {
-      currentUser = null;
-      quizPage.style.display = "none";
       adminPage.style.display = "none";
+      quizPage.style.display = "none";
       loginPage.style.display = "block";
-      username.value = "";
-      password.value = "";
-      result.innerHTML = "";
     }
 
     // --- Dữ liệu câu hỏi ---
@@ -166,7 +141,7 @@
         q: "2. 2 + 2 bằng mấy?",
         options: ["3", "4", "5", "6"],
         correct: 1
-      }
+      },
     ];
 
     function saveQuestions() {
@@ -205,30 +180,10 @@
           details += `<p class='answer'>Chưa chọn câu ${i+1}. Đáp án đúng: ${q.options[q.correct]}</p>`;
         }
       });
-
       result.innerHTML = `<p>Kết quả: ${correct}/${questions.length} câu đúng</p>${details}`;
-      updateHighScore(correct);
-    }
-
-    // --- Lưu điểm cao nhất ---
-    function updateHighScore(score) {
-      const data = JSON.parse(localStorage.getItem(currentUser));
-      if (score > (data.highScore || 0)) {
-        data.highScore = score;
-        localStorage.setItem(currentUser, JSON.stringify(data));
-        showHighScore();
-        alert("🎉 Bạn vừa đạt kỷ lục mới!");
-      }
-    }
-
-    function showHighScore() {
-      const data = JSON.parse(localStorage.getItem(currentUser));
-      highScoreText.innerText = `🏆 Điểm cao nhất: ${data.highScore}/${questions.length}`;
     }
 
     // --- Trang Admin ---
-    let editingIndex = -1;
-
     function loadQuestionList() {
       questionList.innerHTML = questions.map((q, i) => `
         <div class="question">
@@ -266,6 +221,7 @@
       alert("Đã lưu câu hỏi!");
     }
 
+    let editingIndex = -1;
     function editQuestion(i) {
       const q = questions[i];
       newQuestion.value = q.q;
